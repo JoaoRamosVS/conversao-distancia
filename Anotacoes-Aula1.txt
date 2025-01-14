@@ -1,0 +1,74 @@
+calms - 5 pilares do devops
+cultura
+automação
+lean aumentar frequência e reduzir tempo de ciclos de entrega
+medição
+sharing compartilhamento (feedback das equipes para que todos contribuam para a qualidade final do projeto)
+
+Docker container run 
+parâmetro -it : rodar o container de modo interativo, interagindo com o terminal do container
+parâmetro -d : rodar o container em segundo plano
+parâmetro -p : faz um bind da porta do container com a porta da maquina (porta da maquina:porta do container)
+parâmetro --name : define o nome do container
+
+remover todos containers : Docker container rm -f $(Docker container ls -qa)
+
+---------------------------------------------------------------------------------
+EXEMPLO DE DOCKERFILE PARA APLICAÇÕES PYTHON
+
+IMAGEM DOCKER PARA INSTALAÇÃO
+FROM [nome-da-imagem]
+
+DIRETORIO PARA ARMAZENAR A APLICAÇAO
+WORKDIR [/nome-do-diretorio]
+
+COPIAR O NOME DAS DEPENDENCIAS PARA O DIRETORIO DA APLICAÇAO
+COPY requirements.txt .
+
+BAIXAR AS DEPENDENCIAS APONTADAS
+RUN pip install -r requirements.txt
+
+COPIAR OS ARQUIVOS DA APLICAÇÃO
+COPY . /app/
+
+COMANDO PARA ESPECIFICAR A PORTA DA APLICAÇÃO
+EXPOSE 5000
+
+DEFINIR O COMANDO DE INICIALIZAÇAO DO CONTAINER (PARA EXECUTAR A APLICAÇÃO)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+
+---------------------------------------------------------------------------------
+
+COMANDO DOCKER PARA BUILDAR A IMAGEM
+Docker build
+
+parâmetro -t : definir o nome da imagem
+parâmetro -f : definir qual Dockerfile sera utilizada (por padrão procura o Dockerfile)
+
+passar o contexto (qual diretório será utilizado para construir a imagem)
+
+docker build -t conversao-distancia -f Dockerfile .
+
+LISTA TODAS AS IMAGENS
+docker image ls
+
+docker container run -d -p 8181:5000 conversao-dista
+ncia
+
+PADRÃO DE NOMENCLATURA DE IMAGENS DOCKER
+
+NAMESPACE/NOME-DO-REPOSITORIO:TAG (TAG É A VERSAO)
+
+docker build -t joaoramosvs/conversao-distancia:v1 .
+
+para enviar o push para o repositório, deve se autenticar primeiro
+
+docker login
+
+BOA PRÁTICA: SEMPRE QUE ENVIAR UMA TAG NOVA, TAMBEM ENVIALA COM A TAG LATEST
+
+para não rodar o build novamente, código abaixo:
+docker tag joaoramosvs/conversao-distancia:v1 joaoramosvs/conversao-distancia:latest
+
+docker container run -d --name desf_devops -p 8181:5
+000 joaoramosvs/conversao-distancia:latest
