@@ -1,0 +1,127 @@
+Kubernetes funciona com arquitetura de clusters,composta por duas principais partes
+
+Control plane - orquestra o cluster, composto por:
+	API Server : ponto central de comunicação com o Kubernetes
+	etcd: Banco chave-valor que armazena as informações do cluster
+	Scheduler: define em qual nó os containers serão executados
+	Controller Manager: gerencia os controladores que mantem o estado desejado do cluster
+
+Worker Nodes:
+	kubelet : responsável por garantir a execução dos containers, se comunicando com o 	container runtime
+	kube-proxy : gerencia a comunicação de rede no cluster
+
+FORMAS DE CRIAÇÃO DO KUBERNETES
+- Kubernetes as a Service : gerenciado pelos serviços de nuvem
+- Manual
+- Ambiente local : ferramentas como minikube, kind ou k3d criam o cluster baseado em containers Docker
+
+INSTALAÇÃO KUBERNETES
+AMBIENTE LINUX, WSL
+
+DOWNLOAD kubectl
+
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --client
+
+DOWNLOAD K3D
+curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+
+---------------------------------------------------------------
+
+COMANDO DE CRIAÇÃO DE CLUSTER NO K3D
+k3d cluster create
+
+obs. cria um cluster que gerencia todas as partes, ideal somente para ambiente de estudo pois muitos cluster necessitam de mais recurso computacional
+
+kubectl get nodes - lista os nós 
+
+k3d cluster list - lista quais clusters tenho criados pelo k3d
+
+Docker container ls - lista os containers utilizados pelos clusters criados
+
+k3d cluster delete - apaga o cluster criado
+
+k3d cluster create meucluster --servers 3 --agents 3 - cria um cluster com nome definido, 3 servers (control planes) e 3 agents (worker nodes)
+
+k3d cluster delete meucluster
+
+---------------------------------------
+
+pod - menor objeto do cluster, o que executa os containers
+replicasets - cuida da escabilidade e resiliência, controlador do pod
+deployment - gerenciamento do replicasets, fazer troca de versão
+service - expor os pods e replicasets
+
+tudo no kubernetes é criado através de forma declarativa - declara o que você quer criar, o cluster vera a especificação e criará para você, através do arquivo yaml
+
+------------------------------------------
+projeto - estrutura de pastas
+pasta k8s > arquivo deployment.yaml
+
+campos:
+
+-- verificar com a linha de comando kubectl api-resources
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: conversao-distancia
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: conversao-distancia
+  template:
+    metadata:
+      labels:
+        app: conversao-distancia
+    spec:
+      containers:
+        - name: conversao-distancia
+          image: joaoramosvs/conversao-distancia:v1
+          ports:
+            - containerPort: 5000
+
+microsserviços: um pod, um deployment para cada ms para escabilidade
+
+COMANDOS PARA CRIAR O CLUSTER KUBERNETES
+
+kubectl create -f k8s/deployment.yaml
+
+kubectl apply -f k8s/deployment.yaml - cria se não existir, e se já existir aplica as diferenças
+
+objetos criados, verificar pods:
+kubectl get pods
+
+descrever pod
+kubectl describe pod conversao-distancia-9bbd5495-zf6rx
+
+kubectl get replicaset
+
+bind de porta da máquina com o pod
+kubectl port-forward pod/conversao-distancia-9bbd5495-zf6rx 8181:5000
+
+service discovery é o que será utilizado para acessar um ou mais pods da aplicação
+
+services:
+	cluster ip : utilizado para comunicação interna no kubernetes
+	node port : expõe o pod para o mundo externo, podendo acessar através de qualquer ip que faça parte do cluster kubernetes, precisando saber somente a porta hospedada
+	service utilizado nos clouds: loadbalance
+
+configuração do service no arquivo deployment.yaml
+
+apiVersion: v1 
+kind: Service 
+metadata:
+  name: conversao-distancia
+spec:
+  selector:
+    app: conversao-distancia
+  ports:
+  - port: 80
+    targetPort: 5000
+    nodePort: 30000 // especifica uma porta node, o range deve ser de 30000 a 33000
+  type: NodePort
+
+criação do cluster com port binding da máquina local
+k3d cluster create meucluster --servers 1 --agents 2 -p "8181:30000@loadbalancer"
